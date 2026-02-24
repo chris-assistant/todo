@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vanilla JS Todo (LocalStorage)</title>
+  <style>
+    :root { --bg:#f6f7fb; --card:#fff; --text:#222; --muted:#6b7280; --accent:#2563eb; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    p { margin: 0 0 16px; color: var(--muted); }
+    .card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+    form { display:flex; gap: 8px; }
+    input[type=text] { flex:1; padding: 10px 12px; border:1px solid #e5e7eb; border-radius: 8px; font-size: 15px; }
+    button { padding: 10px 14px; border:none; border-radius: 8px; background: var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+    ul { list-style:none; padding:0; margin:16px 0 0; }
+    li { display:flex; align-items:center; gap: 10px; padding: 10px 8px; border-bottom:1px solid #eef2f7; }
+    li:last-child { border-bottom:none; }
+    .todo-text { flex:1; }
+    .todo-text.done { text-decoration: line-through; color: var(--muted); }
+    .actions { display:flex; gap:6px; }
+    .actions button { background:#e5e7eb; color:#111; font-weight:500; }
+    .actions button.delete { background:#fee2e2; color:#991b1b; }
+    .footer { display:flex; justify-content:space-between; align-items:center; margin-top: 12px; color: var(--muted); font-size: 13px; }
+    .link { color: var(--accent); text-decoration:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Todo List</h1>
+    <p>Vanilla JavaScript + LocalStorage</p>
+    <div class="card">
+      <form id="todo-form">
+        <input id="todo-input" type="text" placeholder="Add a task..." autocomplete="off" />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="todo-list"></ul>
+      <div class="footer">
+        <span id="count">0 items</span>
+        <a id="clear" class="link">Clear completed</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'vanilla_todos_v1';
+
+    const form = document.getElementById('todo-form');
+    const input = document.getElementById('todo-input');
+    const list = document.getElementById('todo-list');
+    const countEl = document.getElementById('count');
+    const clearBtn = document.getElementById('clear');
+
+    let todos = load();
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch { return []; }
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    }
+
+    function render() {
+      list.innerHTML = '';
+      todos.forEach((t) => {
+        const li = document.createElement('li');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = t.done;
+        checkbox.addEventListener('change', () => {
+          t.done = checkbox.checked;
+          save();
+          render();
+        });
+
+        const span = document.createElement('span');
+        span.className = 'todo-text' + (t.done ? ' done' : '');
+        span.textContent = t.text;
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => {
+          const next = prompt('Edit task:', t.text);
+          if (next !== null && next.trim()) {
+            t.text = next.trim();
+            save();
+            render();
+          }
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.className = 'delete';
+        delBtn.addEventListener('click', () => {
+          todos = todos.filter(x => x.id !== t.id);
+          save();
+          render();
+        });
+
+        actions.append(editBtn, delBtn);
+        li.append(checkbox, span, actions);
+        list.appendChild(li);
+      });
+
+      const remaining = todos.filter(t => !t.done).length;
+      countEl.textContent = `${remaining} item${remaining === 1 ? '' : 's'} left`;
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      todos.push({ id: crypto.randomUUID(), text, done: false });
+      input.value = '';
+      save();
+      render();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      todos = todos.filter(t => !t.done);
+      save();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
